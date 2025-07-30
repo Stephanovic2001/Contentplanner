@@ -19,7 +19,7 @@ secrets["private_key"] = secrets["private_key"].replace("\\n", "\n")
 # Authoriseren
 creds = ServiceAccountCredentials.from_json_keyfile_dict(secrets, scope)
 client = gspread.authorize(creds)
-sheet = client.open("Contentplanner").sheet1
+sheet = client.open_by_key("1vY9hfH5rGNWsOC3nXks_umupEjeQ-_Z-uQB37yFNG9s").sheet1
 
 # Data ophalen
 records = sheet.get_all_records()
