@@ -19,7 +19,7 @@ if "content_df" not in st.session_state:
         "⏳ Deadline", "📆 Publicatiedatum", "📱 Platform", "✅ Geplaatst?", "📊 Resultaat"
     ])
 
-# ➕ Nieuwe post toevoegen
+# ➕ NIEUWE POST TOEVOEGEN
 with st.expander("➕ Nieuwe post toevoegen"):
     col1, col2 = st.columns(2)
     with col1:
@@ -52,20 +52,16 @@ with st.expander("➕ Nieuwe post toevoegen"):
         ], ignore_index=True)
         st.success("Post toegevoegd!")
 
-# 📋 Overzicht
-st.subheader("📋 Jouw contentplanning")
-
-# 📌 Post bewerken
+# ✏️ POST BEWERKEN (selectie + formulier in 1)
 if not st.session_state.content_df.empty:
-    titels = st.session_state.content_df["📝 Titel"].tolist()
-    geselecteerde_titel = st.selectbox("✏️ Selecteer een post om te bewerken", titels)
-    geselecteerde_index = st.session_state.content_df[
-        st.session_state.content_df["📝 Titel"] == geselecteerde_titel
-    ].index[0]
-    rij = st.session_state.content_df.loc[geselecteerde_index]
+    with st.expander("✏️ Post bewerken"):
+        titels = st.session_state.content_df["📝 Titel"].tolist()
+        geselecteerde_titel = st.selectbox("Selecteer een post om te bewerken", titels)
+        geselecteerde_index = st.session_state.content_df[
+            st.session_state.content_df["📝 Titel"] == geselecteerde_titel
+        ].index[0]
+        rij = st.session_state.content_df.loc[geselecteerde_index]
 
-    # ✏️ Bewerksectie als uitklapbaar blok
-    with st.expander("✏️ Bewerk deze post"):
         col1, col2 = st.columns(2)
         with col1:
             nieuwe_titel = st.text_input("Titel", value=rij["📝 Titel"], key="edit_titel")
@@ -93,10 +89,10 @@ if not st.session_state.content_df.empty:
             }
             st.success("Post bijgewerkt!")
 
-# 📊 Toon volledige contentplanning
+# 📊 PLANNINGSTABEL
 st.dataframe(st.session_state.content_df, use_container_width=True)
 
-# 📥 Download als Excel
+# 📥 DOWNLOAD ALS EXCEL
 def create_excel_file(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
