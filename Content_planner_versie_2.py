@@ -19,7 +19,9 @@ secrets["private_key"] = secrets["private_key"].replace("\\n", "\n")
 # Authoriseren
 creds = ServiceAccountCredentials.from_json_keyfile_dict(secrets, scope)
 client = gspread.authorize(creds)
-sheet = client.open_by_key("1vY9hfH5rGNWsOC3nXks_umupEjeQ-_Z-uQB37yFNG9s").sheet1
+
+# Verbind via Sheet-ID (stabieler)
+sheet = client.open_by_key("1vY9hfH5rGNWsOC3nXks_umupEjeQ-_Z-uQB37yFNG9s").sheet1  
 
 # Data ophalen
 records = sheet.get_all_records()
@@ -50,7 +52,7 @@ with st.expander("➕ Nieuwe post toevoegen"):
                 platform, "Ja" if geplaatst else "Nee", resultaat
             ])
             st.success("Nieuwe post toegevoegd!")
-            st.experimental_rerun()
+            st.rerun()
 
 # Post bewerken/verwijderen
 with st.expander("✏️ Post bewerken"):
@@ -84,13 +86,13 @@ with st.expander("✏️ Post bewerken"):
                         nieuwe_platform, "Ja" if nieuwe_geplaatst else "Nee", nieuwe_resultaat
                     ]])
                     st.success("Post bijgewerkt!")
-                    st.experimental_rerun()
+                    st.rerun()
 
             with col2:
                 if st.button("🗑️ Verwijder post"):
                     sheet.delete_rows(rij_index)
                     st.success("Post verwijderd.")
-                    st.experimental_rerun()
+                    st.rerun()
 
 # Kalenderoverzicht
 st.subheader("📆 Overzicht")
@@ -105,3 +107,4 @@ def convert_df_to_excel(dataframe):
     return dataframe.to_csv(index=False).encode("utf-8")
 
 st.download_button("📥 Download als Excel", convert_df_to_excel(df), "contentplanner.csv", "text/csv")
+
