@@ -98,7 +98,8 @@ with st.expander("✏️ Post bewerken"):
 
             if st.button("🗑️ Verwijder post"):
                 st.session_state.content_df = st.session_state.content_df.drop(index=geselecteerde_index).reset_index(drop=True)
-                st.session_state.geselecteerde_titel = None
+                if "geselecteerde_titel" in st.session_state:
+                    del st.session_state["geselecteerde_titel"]
                 st.success("Post verwijderd! Selecteer een andere post om te bewerken.")
     else:
         st.info("Er zijn nog geen posts om te bewerken. Voeg eerst een post toe hierboven.")
@@ -122,4 +123,3 @@ st.download_button(
     file_name="contentplanner.xlsx",
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
-
