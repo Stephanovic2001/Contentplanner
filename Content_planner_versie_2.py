@@ -1,125 +1,102 @@
 import streamlit as st
 import pandas as pd
-from io import BytesIO
+import gspread
 from datetime import datetime
+from oauth2client.service_account import ServiceAccountCredentials
 
-# Keuzeopties
-status_opties = ["🔴 Idee", "🟡 In bewerking", "🟢 Klaar"]
-media_status_opties = ["🔴 Nog maken", "🟡 Gekozen media", "🟢 Gekoppeld"]
-platform_opties = ["Instagram", "TikTok", "Facebook"]
-
-# Pagina-instellingen
-st.set_page_config(page_title="Contentplanner", layout="wide")
+# --- Pagina-instellingen ---
+st.set_page_config(page_title="Visuele Contentplanner", layout="wide")
 st.title("📅 Visuele Contentplanner")
 
-# ✅ DataFrame initialiseren
-if "content_df" not in st.session_state or st.session_state.content_df is None:
-    st.session_state.content_df = pd.DataFrame(columns=[
-        "📝 Titel", "📌 Status", "✍️ Caption", "🖼️ Media-status",
-        "⏳ Deadline", "📆 Publicatiedatum", "📱 Platform", "✅ Geplaatst?", "📊 Resultaat"
-    ])
+# --- Google Sheets verbinden via secrets ---
+scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds_dict = st.secrets["gspread"]
+creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
+client = gspread.authorize(creds)
+sheet = client.open("Contentplanner").sheet1
 
-# ➕ Nieuwe post toevoegen
+# --- Data ophalen ---
+records = sheet.get_all_records()
+df = pd.DataFrame(records)
+
+# --- Session state ---
+if "geselecteerde_titel" not in st.session_state:
+    st.session_state.geselecteerde_titel = None
+
+# --- Nieuwe post toevoegen ---
 with st.expander("➕ Nieuwe post toevoegen"):
-    col1, col2 = st.columns(2)
-    with col1:
+    with st.form("nieuwe_post"):
         titel = st.text_input("Titel")
-        status = st.selectbox("Status", status_opties)
+        status = st.selectbox("Status", ["Idee", "In bewerking", "Klaar"])
         caption = st.text_area("Caption")
-        media_status = st.selectbox("Media-status", media_status_opties)
-    with col2:
-        deadline = st.date_input("Deadline", value=datetime.today())
-        pub_datum = st.date_input("Publicatiedatum", value=datetime.today())
-        platform = st.selectbox("Platform", platform_opties)
+        media_status = st.selectbox("Media-status", ["Nog maken", "Gekozen media", "Gekoppeld"])
+        deadline = st.date_input("Deadline")
+        publicatie = st.date_input("Publicatiedatum")
+        platform = st.selectbox("Platform", ["Instagram", "TikTok", "Facebook", "LinkedIn"])
         geplaatst = st.checkbox("Geplaatst?")
         resultaat = st.text_input("Resultaat (optioneel)")
 
-    if st.button("✅ Voeg toe aan planning"):
-        nieuwe_rij = {
-            "📝 Titel": titel,
-            "📌 Status": status,
-            "✍️ Caption": caption,
-            "🖼️ Media-status": media_status,
-            "⏳ Deadline": deadline.strftime("%Y-%m-%d"),
-            "📆 Publicatiedatum": pub_datum.strftime("%Y-%m-%d"),
-            "📱 Platform": platform,
-            "✅ Geplaatst?": "✅ Ja" if geplaatst else "❌ Nee",
-            "📊 Resultaat": resultaat
-        }
-        st.session_state.content_df = pd.concat([
-            st.session_state.content_df,
-            pd.DataFrame([nieuwe_rij])
-        ], ignore_index=True)
-        st.success("Post toegevoegd!")
+        submitted = st.form_submit_button("✅ Voeg toe aan planning")
+        if submitted and titel.strip():
+            sheet.append_row([
+                titel, status, caption, media_status,
+                deadline.strftime("%Y-%m-%d"), publicatie.strftime("%Y-%m-%d"),
+                platform, "Ja" if geplaatst else "Nee", resultaat
+            ])
+            st.success("Nieuwe post toegevoegd!")
+            st.experimental_rerun()
 
-# ✏️ Post bewerken (altijd zichtbaar)
+# --- Post bewerken of verwijderen ---
 with st.expander("✏️ Post bewerken"):
-    if not st.session_state.content_df.empty:
-        titels = st.session_state.content_df["📝 Titel"].tolist()
+    if df.empty:
+        st.info("Er zijn nog geen posts toegevoegd.")
+    else:
+        titels = df["📝 Titel"].tolist() if "📝 Titel" in df.columns else df["Titel"].tolist()
+        selectie = st.selectbox("Selecteer een post om te bewerken", titels)
 
-        geselecteerde_titel = st.selectbox(
-            "Selecteer een post om te bewerken", 
-            titels, 
-            key="geselecteerde_titel"
-        )
+        if selectie:
+            post = df[df["📝 Titel"] == selectie].iloc[0] if "📝 Titel" in df.columns else df[df["Titel"] == selectie].iloc[0]
 
-        if geselecteerde_titel:
-            geselecteerde_index = st.session_state.content_df[
-                st.session_state.content_df["📝 Titel"] == geselecteerde_titel
-            ].index[0]
-            rij = st.session_state.content_df.loc[geselecteerde_index]
+            nieuwe_titel = st.text_input("Titel", post.get("📝 Titel", post.get("Titel", "")))
+            nieuwe_status = st.selectbox("Status", ["Idee", "In bewerking", "Klaar"], index=["Idee", "In bewerking", "Klaar"].index(post.get("📌 Status", post.get("Status"))))
+            nieuwe_caption = st.text_area("Caption", post.get("✍️ Caption", post.get("Caption", "")))
+            nieuwe_media = st.selectbox("Media-status", ["Nog maken", "Gekozen media", "Gekoppeld"], index=["Nog maken", "Gekozen media", "Gekoppeld"].index(post.get("🖼️ Media-status", post.get("Media-status"))))
+            nieuwe_deadline = st.date_input("Deadline", datetime.strptime(post.get("⏳ Deadline", post.get("Deadline")), "%Y-%m-%d"))
+            nieuwe_publicatie = st.date_input("Publicatiedatum", datetime.strptime(post.get("📆 Publicatiedatum", post.get("Publicatiedatum")), "%Y-%m-%d"))
+            nieuwe_platform = st.selectbox("Platform", ["Instagram", "TikTok", "Facebook", "LinkedIn"], index=["Instagram", "TikTok", "Facebook", "LinkedIn"].index(post.get("📱 Platform", post.get("Platform"))))
+            nieuwe_geplaatst = st.checkbox("Geplaatst?", value=(post.get("✅ Geplaatst?", post.get("Geplaatst?")) == "Ja"))
+            nieuwe_resultaat = st.text_input("Resultaat (optioneel)", post.get("📊 Resultaat", post.get("Resultaat", "")))
+
+            rij_index = df[df["📝 Titel"] == selectie].index[0] + 2 if "📝 Titel" in df.columns else df[df["Titel"] == selectie].index[0] + 2
 
             col1, col2 = st.columns(2)
             with col1:
-                nieuwe_titel = st.text_input("Titel", value=rij["📝 Titel"], key="edit_titel")
-                nieuwe_status = st.selectbox("Status", status_opties, index=status_opties.index(rij["📌 Status"]), key="edit_status")
-                nieuwe_caption = st.text_area("Caption", value=rij["✍️ Caption"], key="edit_caption")
-                nieuwe_media_status = st.selectbox("Media-status", media_status_opties, index=media_status_opties.index(rij["🖼️ Media-status"]), key="edit_media")
+                if st.button("💾 Update post"):
+                    sheet.update(f"A{rij_index}:I{rij_index}", [[
+                        nieuwe_titel, nieuwe_status, nieuwe_caption, nieuwe_media,
+                        nieuwe_deadline.strftime("%Y-%m-%d"), nieuwe_publicatie.strftime("%Y-%m-%d"),
+                        nieuwe_platform, "Ja" if nieuwe_geplaatst else "Nee", nieuwe_resultaat
+                    ]])
+                    st.success("Post bijgewerkt!")
+                    st.experimental_rerun()
+
             with col2:
-                nieuwe_deadline = st.date_input("Deadline", value=datetime.strptime(rij["⏳ Deadline"], "%Y-%m-%d"), key="edit_deadline")
-                nieuwe_pub_datum = st.date_input("Publicatiedatum", value=datetime.strptime(rij["📆 Publicatiedatum"], "%Y-%m-%d"), key="edit_pubdatum")
-                nieuwe_platform = st.selectbox("Platform", platform_opties, index=platform_opties.index(rij["📱 Platform"]), key="edit_platform")
-                nieuwe_geplaatst = st.checkbox("Geplaatst?", value=(rij["✅ Geplaatst?"] == "✅ Ja"), key="edit_geplaatst")
-                nieuwe_resultaat = st.text_input("Resultaat (optioneel)", value=rij["📊 Resultaat"], key="edit_resultaat")
+                if st.button("🗑️ Verwijder post"):
+                    sheet.delete_rows(rij_index)
+                    st.success("Post verwijderd.")
+                    st.experimental_rerun()
 
-            if st.button("💾 Update post"):
-                st.session_state.content_df.loc[geselecteerde_index] = {
-                    "📝 Titel": nieuwe_titel,
-                    "📌 Status": nieuwe_status,
-                    "✍️ Caption": nieuwe_caption,
-                    "🖼️ Media-status": nieuwe_media_status,
-                    "⏳ Deadline": nieuwe_deadline.strftime("%Y-%m-%d"),
-                    "📆 Publicatiedatum": nieuwe_pub_datum.strftime("%Y-%m-%d"),
-                    "📱 Platform": nieuwe_platform,
-                    "✅ Geplaatst?": "✅ Ja" if nieuwe_geplaatst else "❌ Nee",
-                    "📊 Resultaat": nieuwe_resultaat
-                }
-                st.success("Post bijgewerkt!")
+# --- Kalenderoverzicht ---
+st.subheader("📆 Overzicht")
+if df.empty:
+    st.write("Nog geen posts gepland.")
+else:
+    df.index = df.index + 1
+    st.dataframe(df, use_container_width=True)
 
-            if st.button("🗑️ Verwijder post"):
-                st.session_state.content_df = st.session_state.content_df.drop(index=geselecteerde_index).reset_index(drop=True)
-                if "geselecteerde_titel" in st.session_state:
-                    del st.session_state["geselecteerde_titel"]
-                st.success("Post verwijderd! Selecteer een andere post om te bewerken.")
-    else:
-        st.info("Er zijn nog geen posts om te bewerken. Voeg eerst een post toe hierboven.")
+# --- Downloadknop ---
+def convert_df_to_excel(dataframe):
+    return dataframe.to_csv(index=False).encode("utf-8")
 
-# 📊 Tabel (index vanaf 1)
-df_met_index = st.session_state.content_df.copy()
-df_met_index.index = df_met_index.index + 1
-st.dataframe(df_met_index, use_container_width=True)
+st.download_button("📥 Download als Excel", convert_df_to_excel(df), "contentplanner.csv", "text/csv")
 
-# 📥 Download als Excel
-def create_excel_file(df):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, index=False, sheet_name="Contentplanning")
-    return output.getvalue()
-
-excel_bytes = create_excel_file(st.session_state.content_df)
-st.download_button(
-    label="📥 Download als Excel",
-    data=excel_bytes,
-    file_name="contentplanner.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
