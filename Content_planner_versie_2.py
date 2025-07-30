@@ -12,14 +12,19 @@ platform_opties = ["Instagram", "TikTok", "Facebook"]
 st.set_page_config(page_title="Contentplanner", layout="wide")
 st.title("📅 Visuele Contentplanner")
 
-# ✅ DataFrame-initialisatie
+# 🔁 Veilige herlaadtrigger voor verwijderen
+if st.session_state.get("post_verwijderd"):
+    st.session_state.post_verwijderd = False
+    st.experimental_rerun()
+
+# ✅ Zorg dat content_df altijd bestaat
 if "content_df" not in st.session_state or st.session_state.content_df is None:
     st.session_state.content_df = pd.DataFrame(columns=[
         "📝 Titel", "📌 Status", "✍️ Caption", "🖼️ Media-status",
         "⏳ Deadline", "📆 Publicatiedatum", "📱 Platform", "✅ Geplaatst?", "📊 Resultaat"
     ])
 
-# ➕ Nieuwe post
+# ➕ NIEUWE POST TOEVOEGEN
 with st.expander("➕ Nieuwe post toevoegen"):
     col1, col2 = st.columns(2)
     with col1:
@@ -52,7 +57,7 @@ with st.expander("➕ Nieuwe post toevoegen"):
         ], ignore_index=True)
         st.success("Post toegevoegd!")
 
-# ✏️ Post bewerken
+# ✏️ POST BEWERKEN – altijd zichtbaar
 with st.expander("✏️ Post bewerken"):
     if not st.session_state.content_df.empty:
         titels = st.session_state.content_df["📝 Titel"].tolist()
@@ -91,17 +96,17 @@ with st.expander("✏️ Post bewerken"):
 
         if st.button("🗑️ Verwijder post"):
             st.session_state.content_df = st.session_state.content_df.drop(index=geselecteerde_index).reset_index(drop=True)
+            st.session_state.post_verwijderd = True
             st.success("Post verwijderd!")
-            st.experimental_rerun()
     else:
         st.info("Er zijn nog geen posts om te bewerken. Voeg eerst een post toe hierboven.")
 
-# 📊 Tabel (index begint op 1)
+# 📊 TABEL – index vanaf 1
 df_met_index = st.session_state.content_df.copy()
 df_met_index.index = df_met_index.index + 1
 st.dataframe(df_met_index, use_container_width=True)
 
-# 📥 Download als Excel
+# 📥 DOWNLOAD ALS EXCEL
 def create_excel_file(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
