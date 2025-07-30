@@ -12,14 +12,14 @@ platform_opties = ["Instagram", "TikTok", "Facebook"]
 st.set_page_config(page_title="Contentplanner", layout="wide")
 st.title("📅 Visuele Contentplanner")
 
-# ✅ Zorg dat content_df altijd bestaat
+# ✅ DataFrame-initialisatie
 if "content_df" not in st.session_state or st.session_state.content_df is None:
     st.session_state.content_df = pd.DataFrame(columns=[
         "📝 Titel", "📌 Status", "✍️ Caption", "🖼️ Media-status",
         "⏳ Deadline", "📆 Publicatiedatum", "📱 Platform", "✅ Geplaatst?", "📊 Resultaat"
     ])
 
-# ➕ NIEUWE POST TOEVOEGEN
+# ➕ Nieuwe post
 with st.expander("➕ Nieuwe post toevoegen"):
     col1, col2 = st.columns(2)
     with col1:
@@ -52,7 +52,7 @@ with st.expander("➕ Nieuwe post toevoegen"):
         ], ignore_index=True)
         st.success("Post toegevoegd!")
 
-# ✏️ POST BEWERKEN – altijd zichtbaar
+# ✏️ Post bewerken
 with st.expander("✏️ Post bewerken"):
     if not st.session_state.content_df.empty:
         titels = st.session_state.content_df["📝 Titel"].tolist()
@@ -88,15 +88,20 @@ with st.expander("✏️ Post bewerken"):
                 "📊 Resultaat": nieuwe_resultaat
             }
             st.success("Post bijgewerkt!")
+
+        if st.button("🗑️ Verwijder post"):
+            st.session_state.content_df = st.session_state.content_df.drop(index=geselecteerde_index).reset_index(drop=True)
+            st.success("Post verwijderd!")
+            st.experimental_rerun()
     else:
         st.info("Er zijn nog geen posts om te bewerken. Voeg eerst een post toe hierboven.")
 
-# 📊 TABEL – index begint bij 1
+# 📊 Tabel (index begint op 1)
 df_met_index = st.session_state.content_df.copy()
 df_met_index.index = df_met_index.index + 1
 st.dataframe(df_met_index, use_container_width=True)
 
-# 📥 DOWNLOAD ALS EXCEL
+# 📥 Download als Excel
 def create_excel_file(df):
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
