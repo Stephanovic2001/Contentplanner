@@ -12,11 +12,6 @@ platform_opties = ["Instagram", "TikTok", "Facebook"]
 st.set_page_config(page_title="Contentplanner", layout="wide")
 st.title("📅 Visuele Contentplanner")
 
-# 🔁 Veilige herlaadtrigger voor verwijderen
-if st.session_state.get("post_verwijderd"):
-    st.session_state.post_verwijderd = False
-    st.experimental_rerun()
-
 # ✅ Zorg dat content_df altijd bestaat
 if "content_df" not in st.session_state or st.session_state.content_df is None:
     st.session_state.content_df = pd.DataFrame(columns=[
@@ -56,6 +51,11 @@ with st.expander("➕ Nieuwe post toevoegen"):
             pd.DataFrame([nieuwe_rij])
         ], ignore_index=True)
         st.success("Post toegevoegd!")
+
+# 🔁 Direct rerun vóór bewerksectie
+if st.session_state.get("post_verwijderd"):
+    st.session_state.post_verwijderd = False
+    st.experimental_rerun()
 
 # ✏️ POST BEWERKEN – altijd zichtbaar
 with st.expander("✏️ Post bewerken"):
@@ -97,7 +97,7 @@ with st.expander("✏️ Post bewerken"):
         if st.button("🗑️ Verwijder post"):
             st.session_state.content_df = st.session_state.content_df.drop(index=geselecteerde_index).reset_index(drop=True)
             st.session_state.post_verwijderd = True
-            st.success("Post verwijderd!")
+            st.stop()  # ⛔️ voorkom verdere uitvoering (zekerheid)
     else:
         st.info("Er zijn nog geen posts om te bewerken. Voeg eerst een post toe hierboven.")
 
