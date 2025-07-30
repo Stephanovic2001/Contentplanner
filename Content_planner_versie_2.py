@@ -52,9 +52,9 @@ with st.expander("➕ Nieuwe post toevoegen"):
         ], ignore_index=True)
         st.success("Post toegevoegd!")
 
-# ✏️ POST BEWERKEN
-if "content_df" in st.session_state and not st.session_state.content_df.empty:
-    with st.expander("✏️ Post bewerken"):
+# ✏️ POST BEWERKEN – altijd zichtbaar
+with st.expander("✏️ Post bewerken"):
+    if not st.session_state.content_df.empty:
         titels = st.session_state.content_df["📝 Titel"].tolist()
         geselecteerde_titel = st.selectbox("Selecteer een post om te bewerken", titels)
         geselecteerde_index = st.session_state.content_df[
@@ -88,8 +88,10 @@ if "content_df" in st.session_state and not st.session_state.content_df.empty:
                 "📊 Resultaat": nieuwe_resultaat
             }
             st.success("Post bijgewerkt!")
+    else:
+        st.info("Er zijn nog geen posts om te bewerken. Voeg eerst een post toe hierboven.")
 
-# 📊 PLANNINGSTABEL MET INDEX VANAF 1
+# 📊 TABEL – index begint bij 1
 df_met_index = st.session_state.content_df.copy()
 df_met_index.index = df_met_index.index + 1
 st.dataframe(df_met_index, use_container_width=True)
