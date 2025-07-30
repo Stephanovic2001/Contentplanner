@@ -10,20 +10,26 @@ st.title("📅 Visuele Contentplanner")
 
 # --- Google Sheets verbinden via secrets ---
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_dict = st.secrets["gspread"]
-creds = ServiceAccountCredentials.from_json_keyfile_dict(dict(creds_dict), scope)
+
+# Herstel private_key-format (\n)
+raw_secrets = st.secrets["gspread"]
+secrets = dict(raw_secrets)
+secrets["private_key"] = secrets["private_key"].replace("\\n", "\n")
+
+# Authoriseren
+creds = ServiceAccountCredentials.from_json_keyfile_dict(secrets, scope)
 client = gspread.authorize(creds)
 sheet = client.open("Contentplanner").sheet1
 
-# --- Data ophalen ---
+# Data ophalen
 records = sheet.get_all_records()
 df = pd.DataFrame(records)
 
-# --- Session state ---
+# Session state setup
 if "geselecteerde_titel" not in st.session_state:
     st.session_state.geselecteerde_titel = None
 
-# --- Nieuwe post toevoegen ---
+# Nieuwe post toevoegen
 with st.expander("➕ Nieuwe post toevoegen"):
     with st.form("nieuwe_post"):
         titel = st.text_input("Titel")
@@ -46,7 +52,7 @@ with st.expander("➕ Nieuwe post toevoegen"):
             st.success("Nieuwe post toegevoegd!")
             st.experimental_rerun()
 
-# --- Post bewerken of verwijderen ---
+# Post bewerken/verwijderen
 with st.expander("✏️ Post bewerken"):
     if df.empty:
         st.info("Er zijn nog geen posts toegevoegd.")
@@ -86,7 +92,7 @@ with st.expander("✏️ Post bewerken"):
                     st.success("Post verwijderd.")
                     st.experimental_rerun()
 
-# --- Kalenderoverzicht ---
+# Kalenderoverzicht
 st.subheader("📆 Overzicht")
 if df.empty:
     st.write("Nog geen posts gepland.")
@@ -94,9 +100,8 @@ else:
     df.index = df.index + 1
     st.dataframe(df, use_container_width=True)
 
-# --- Downloadknop ---
+# Downloadknop
 def convert_df_to_excel(dataframe):
     return dataframe.to_csv(index=False).encode("utf-8")
 
 st.download_button("📥 Download als Excel", convert_df_to_excel(df), "contentplanner.csv", "text/csv")
-
