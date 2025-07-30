@@ -90,7 +90,9 @@ if not st.session_state.content_df.empty:
             st.success("Post bijgewerkt!")
 
 # 📊 PLANNINGSTABEL
-st.dataframe(st.session_state.content_df, use_container_width=True)
+df_met_index = st.session_state.content_df.copy()
+df_met_index.index = df_met_index.index + 1
+st.dataframe(df_met_index, use_container_width=True)
 
 # 📥 DOWNLOAD ALS EXCEL
 def create_excel_file(df):
