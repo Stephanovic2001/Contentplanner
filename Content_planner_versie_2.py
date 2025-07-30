@@ -12,8 +12,8 @@ platform_opties = ["Instagram", "TikTok", "Facebook"]
 st.set_page_config(page_title="Contentplanner", layout="wide")
 st.title("📅 Visuele Contentplanner")
 
-# DataFrame initiëren
-if "content_df" not in st.session_state:
+# ✅ Zorg dat content_df altijd bestaat
+if "content_df" not in st.session_state or st.session_state.content_df is None:
     st.session_state.content_df = pd.DataFrame(columns=[
         "📝 Titel", "📌 Status", "✍️ Caption", "🖼️ Media-status",
         "⏳ Deadline", "📆 Publicatiedatum", "📱 Platform", "✅ Geplaatst?", "📊 Resultaat"
@@ -52,8 +52,8 @@ with st.expander("➕ Nieuwe post toevoegen"):
         ], ignore_index=True)
         st.success("Post toegevoegd!")
 
-# ✏️ POST BEWERKEN (selectie + formulier in 1)
-if not st.session_state.content_df.empty:
+# ✏️ POST BEWERKEN
+if "content_df" in st.session_state and not st.session_state.content_df.empty:
     with st.expander("✏️ Post bewerken"):
         titels = st.session_state.content_df["📝 Titel"].tolist()
         geselecteerde_titel = st.selectbox("Selecteer een post om te bewerken", titels)
@@ -89,7 +89,7 @@ if not st.session_state.content_df.empty:
             }
             st.success("Post bijgewerkt!")
 
-# 📊 PLANNINGSTABEL
+# 📊 PLANNINGSTABEL MET INDEX VANAF 1
 df_met_index = st.session_state.content_df.copy()
 df_met_index.index = df_met_index.index + 1
 st.dataframe(df_met_index, use_container_width=True)
